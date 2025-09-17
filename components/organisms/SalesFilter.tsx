@@ -5,9 +5,15 @@ import { Input } from "../atoms/Input";
 import { Button } from "../atoms/Button";
 import { salesData } from "@/data/salesData";
 
+// Define the type for a sales record
+interface Sale {
+  year: string;
+  sales: number;
+}
+
 export const SalesFilter = () => {
   const [threshold, setThreshold] = useState<number>(0);
-  const [filtered, setFiltered] = useState(salesData);
+  const [filtered, setFiltered] = useState<Sale[]>(salesData);
 
   const handleFilter = () => {
     setFiltered(salesData.filter((d) => d.sales >= threshold));

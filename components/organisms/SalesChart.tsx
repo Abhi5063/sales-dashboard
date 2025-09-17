@@ -19,14 +19,20 @@ import { ChartSwitcher } from "../molecules/ChartSwitcher";
 
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658"];
 
+// Define a proper type for your sales data
+interface Sale {
+  Year: string;
+  Sales: number;
+}
+
 export const SalesChart = () => {
-  const [salesData, setSalesData] = useState<any[]>([]);
+  const [salesData, setSalesData] = useState<Sale[]>([]);
   const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
 
   useEffect(() => {
     fetch("/api/sales")
       .then((res) => res.json())
-      .then((data) => setSalesData(data));
+      .then((data: Sale[]) => setSalesData(data));
   }, []);
 
   if (!salesData.length) return <p>Loading sales data...</p>;
@@ -71,7 +77,7 @@ export const SalesChart = () => {
               outerRadius={100}
               label
             >
-              {salesData.map((_: any, index: number) => (
+              {salesData.map((_, index) => (
                 <Cell key={index} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
