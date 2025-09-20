@@ -23,8 +23,13 @@ const COLORS = ["#8884d8", "#82ca9d", "#ffc658"];
 interface Sale {
   Year: string;
   Sales: number;
-  [key: string]: string | number; // This is the key addition for Recharts compatibility
+  [key: string]: string | number;
 }
+
+// Type alias for Recharts compatibility
+type ChartData = {
+  [key: string]: string | number;
+};
 
 export const SalesChart = () => {
   const [salesData, setSalesData] = useState<Sale[]>([]);
@@ -33,7 +38,14 @@ export const SalesChart = () => {
   useEffect(() => {
     fetch("/api/sales")
       .then((res) => res.json())
-      .then((data: Sale[]) => setSalesData(data));
+      .then((data: { year: number; sales: number }[]) => {
+        // Transform the data to match our Sale interface
+        const transformedData: Sale[] = data.map((item) => ({
+          Year: item.year.toString(),
+          Sales: item.sales,
+        }));
+        setSalesData(transformedData);
+      });
   }, []);
 
   if (!salesData.length) return <p>Loading sales data...</p>;
@@ -46,7 +58,7 @@ export const SalesChart = () => {
 
       <div className="mt-4">
         {chartType === "bar" && (
-          <BarChart width={500} height={300} data={salesData}>
+          <BarChart width={500} height={300} data={salesData as ChartData[]}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="Year" />
             <YAxis />
@@ -57,7 +69,7 @@ export const SalesChart = () => {
         )}
 
         {chartType === "line" && (
-          <LineChart width={500} height={300} data={salesData}>
+          <LineChart width={500} height={300} data={salesData as ChartData[]}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="Year" />
             <YAxis />
@@ -70,7 +82,7 @@ export const SalesChart = () => {
         {chartType === "pie" && (
           <PieChart width={400} height={300}>
             <Pie
-              data={salesData}
+              data={salesData as ChartData[]}
               dataKey="Sales"
               nameKey="Year"
               cx="50%"
