@@ -1,43 +1,98 @@
 "use client";
 
-import { useState } from "react";
-import { Input } from "../atoms/Input";
-import { Button } from "../atoms/Button";
-import { salesData } from "@/data/salesData";
+import { useEffect, useState } from "react";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Tooltip,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Cell,
+  Legend,
+} from "recharts";
+import { ChartSwitcher } from "../molecules/ChartSwitcher";
 
-// Define the type for a sales record
+const COLORS = ["#8884d8", "#82ca9d", "#ffc658"];
+
+// Define a proper type for your sales data that satisfies Recharts requirements
 interface Sale {
-  year: string;
-  sales: number;
+  Year: string;
+  Sales: number;
+  [key: string]: string | number; // This is the key addition for Recharts compatibility
 }
 
-export const SalesFilter = () => {
-  const [threshold, setThreshold] = useState<number>(0);
-  const [filtered, setFiltered] = useState<Sale[]>(salesData);
+export const SalesChart = () => {
+  const [salesData, setSalesData] = useState<Sale[]>([]);
+  const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
 
-  const handleFilter = () => {
-    setFiltered(salesData.filter((d) => d.sales >= threshold));
-  };
+  useEffect(() => {
+    fetch("/api/sales")
+      .then((res) => res.json())
+      .then((data: { year: number; sales: number }[]) => {
+        // Transform the data to match our Sale interface
+        const transformedData: Sale[] = data.map((item) => ({
+          Year: item.year.toString(),
+          Sales: item.sales,
+        }));
+        setSalesData(transformedData);
+      });
+  }, []);
+
+  if (!salesData.length) return <p>Loading sales data...</p>;
 
   return (
     <div className="p-4 bg-white rounded-2xl shadow-md">
-      <h2 className="text-lg font-semibold mb-2">Filter Sales by Threshold</h2>
-      <div className="flex gap-2">
-        <Input
-          type="number"
-          placeholder="Enter threshold"
-          value={threshold || ""}
-          onChange={(e) => setThreshold(Number(e.target.value))}
-        />
-        <Button onClick={handleFilter}>Apply</Button>
+      <h2 className="text-xl font-bold mb-4">Sales Data (from Kaggle)</h2>
+
+      <ChartSwitcher onSwitch={setChartType} />
+
+      <div className="mt-4">
+        {chartType === "bar" && (
+          <BarChart width={500} height={300} data={salesData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="Year" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="Sales" fill="#8884d8" />
+          </BarChart>
+        )}
+
+        {chartType === "line" && (
+          <LineChart width={500} height={300} data={salesData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="Year" />
+            <YAxis />
+            <Tooltip />
+            <Legend />
+            <Line type="monotone" dataKey="Sales" stroke="#82ca9d" />
+          </LineChart>
+        )}
+
+        {chartType === "pie" && (
+          <PieChart width={400} height={300}>
+            <Pie
+              data={salesData}
+              dataKey="Sales"
+              nameKey="Year"
+              cx="50%"
+              cy="50%"
+              outerRadius={100}
+              label
+            >
+              {salesData.map((_, index) => (
+                <Cell key={index} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip />
+          </PieChart>
+        )}
       </div>
-      <ul className="mt-4 list-disc ml-6">
-        {filtered.map((item) => (
-          <li key={item.year}>
-            {item.year}: {item.sales}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 };

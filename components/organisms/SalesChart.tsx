@@ -19,10 +19,11 @@ import { ChartSwitcher } from "../molecules/ChartSwitcher";
 
 const COLORS = ["#8884d8", "#82ca9d", "#ffc658"];
 
-// Define a proper type for your sales data
+// Define a proper type for your sales data that satisfies Recharts requirements
 interface Sale {
   Year: string;
   Sales: number;
+  [key: string]: string | number; // This is the key addition for Recharts compatibility
 }
 
 export const SalesChart = () => {
