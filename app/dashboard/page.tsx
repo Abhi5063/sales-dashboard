@@ -1,38 +1,87 @@
+// app/dashboard/page.tsx
 "use client";
-import React, { useState } from "react";
+
+import React, { useState, useEffect, useMemo } from "react";
 import SalesChart from "../components/SalesChart";
 import ChartControls from "../components/ChartControls";
-import { defaultSalesData } from "../data/salesData";
+import { fetchSalesData } from "../data/salesData";
+import { ChartType, SalesSeries } from "../lib/types";
+
+// A simple loading spinner component
+const LoadingSpinner = () => (
+  <div className="flex justify-center items-center h-full">
+    <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-600"></div>
+  </div>
+);
 
 export default function DashboardPage() {
-  const [threshold, setThreshold] = useState<number | "">("");
-  const [chartType, setChartType] = useState<"bar" | "line" | "pie">("bar");
+  const [allSeries, setAllSeries] = useState<SalesSeries[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const filtered = defaultSalesData
-    .map((series) => ({
-      ...series,
-      total: series.data.reduce((s, p) => s + p.value, 0),
-    }))
-    .filter((s) => (threshold === "" ? true : s.total >= Number(threshold)));
+  const [threshold, setThreshold] = useState<number | "">("");
+  const [chartType, setChartType] = useState<ChartType>("bar");
+
+  // useEffect to fetch data on component mount, simulating an API call.
+  // This demonstrates handling asynchronous operations[cite: 50].
+  useEffect(() => {
+    fetchSalesData()
+      .then((data) => {
+        setAllSeries(data);
+      })
+      .catch(() => {
+        setError("Failed to load sales data. Please try again later.");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
+
+  // useMemo ensures the expensive filtering logic only runs when its dependencies change[cite: 73].
+  const filteredSeries = useMemo(() => {
+    if (threshold === "") {
+      return allSeries;
+    }
+    return allSeries.filter((series) => {
+      const totalSales = series.data.reduce(
+        (sum, point) => sum + point.sales,
+        0
+      );
+      return totalSales >= Number(threshold);
+    });
+  }, [allSeries, threshold]);
+
+  const renderContent = () => {
+    if (isLoading) {
+      return <LoadingSpinner />;
+    }
+
+    if (error) {
+      return <p className="text-center text-red-600">{error}</p>;
+    }
+
+    if (filteredSeries.length === 0) {
+      return (
+        <p className="text-center text-slate-500">
+          No data matches the selected filter.
+        </p>
+      );
+    }
+
+    return <SalesChart series={filteredSeries} chartType={chartType} />;
+  };
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900 p-8">
-      <h1 className="text-3xl font-bold mb-2">Sales Dashboard</h1>
-      <p className="mb-6 text-slate-600">
-        A demo app showing sales for 2022–2024
-      </p>
-
-      <section className="space-y-6">
-        <ChartControls
-          threshold={threshold}
-          chartType={chartType}
-          onThresholdChange={setThreshold}
-          onChartTypeChange={setChartType}
-        />
-        <div className="bg-white p-4 rounded shadow">
-          <SalesChart series={filtered} chartType={chartType} />
-        </div>
-      </section>
-    </main>
+    <div className="space-y-6">
+      <ChartControls
+        threshold={threshold}
+        chartType={chartType}
+        onThresholdChange={setThreshold}
+        onChartTypeChange={setChartType}
+      />
+      <div className="bg-white p-4 rounded-lg shadow-sm min-h-[400px]">
+        {renderContent()}
+      </div>
+    </div>
   );
 }

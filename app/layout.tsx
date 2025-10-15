@@ -1,9 +1,10 @@
+// app/layout.tsx
 import "./globals.css";
 import React from "react";
 
 export const metadata = {
   title: "Sales Dashboard",
-  description: "Basic sales dashboard with Recharts",
+  description: "A demo sales dashboard built with Next.js and Recharts",
 };
 
 export default function RootLayout({
@@ -13,12 +14,15 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>
-        <main className="min-h-screen p-6">
+      <body className="bg-slate-50 text-slate-900">
+        <main className="container mx-auto p-4 sm:p-6 lg:p-8">
           <header className="mb-6">
-            <h1 className="text-2xl font-semibold">Sales Dashboard</h1>
-            <p className="text-sm text-slate-500">
-              A demo app showing sales for 2022–2024
+            <h1 className="text-3xl font-bold text-slate-800">
+              Sales Dashboard
+            </h1>
+            <p className="text-slate-600">
+              An interactive dashboard for analyzing product sales from
+              2022-2024.
             </p>
           </header>
           {children}

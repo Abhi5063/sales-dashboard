@@ -1,4 +1,6 @@
+// app/components/SalesChart.tsx
 "use client";
+
 import React from "react";
 import {
   BarChart,
@@ -15,82 +17,100 @@ import {
   ResponsiveContainer,
   Cell,
 } from "recharts";
+import { SalesSeries, ChartType } from "../lib/types";
 
-interface SalesPoint {
-  year: number;
-  value: number;
-}
-
-interface SalesSeries {
-  name: string;
-  data: SalesPoint[];
-}
+// Defined colors for chart consistency
+const COLORS = ["#2563eb", "#10b981", "#f59e0b", "#ef4444"];
 
 interface SalesChartProps {
   series: SalesSeries[];
-  chartType: "bar" | "line" | "pie";
+  chartType: ChartType;
 }
 
 export default function SalesChart({ series, chartType }: SalesChartProps) {
-  const colors = ["#2563eb", "#10b981", "#f59e0b"];
-  const mergedData = series[0].data.map((_, i) => ({
-    year: series[0].data[i].year,
-    ...Object.fromEntries(series.map((s) => [s.name, s.data[i].value])),
-  }));
+  // Memoize processed data to avoid recalculation on every render.
+  // This demonstrates performance awareness[cite: 73].
+  const processedData = React.useMemo(() => {
+    if (!series.length) return [];
+
+    // For Bar and Line charts, we need to merge data by year.
+    const mergedByYear: {
+      [year: string]: { year: number; [key: string]: number };
+    } = {};
+
+    series.forEach((s) => {
+      s.data.forEach((point) => {
+        if (!mergedByYear[point.year]) {
+          mergedByYear[point.year] = { year: point.year };
+        }
+        mergedByYear[point.year][s.name] = point.sales;
+      });
+    });
+    // Sort by year to ensure correct order on the X-axis
+    return Object.values(mergedByYear).sort((a, b) => a.year - b.year);
+  }, [series]);
 
   if (chartType === "pie") {
-    const total = series.map((s) => ({
+    const pieData = series.map((s) => ({
       name: s.name,
-      value: s.data.reduce((sum, p) => sum + p.value, 0),
+      value: s.data.reduce((sum, point) => sum + point.sales, 0),
     }));
+
     return (
       <ResponsiveContainer width="100%" height={400}>
         <PieChart>
-          <Pie data={total} dataKey="value" nameKey="name" outerRadius={150}>
-            {total.map((_, i) => (
-              <Cell key={i} fill={colors[i % colors.length]} />
+          <Pie
+            data={pieData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={150}
+          >
+            {pieData.map((_, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={COLORS[index % COLORS.length]}
+              />
             ))}
           </Pie>
-          <Tooltip />
+          <Tooltip
+            formatter={(value: number) => `$${value.toLocaleString()}`}
+          />
           <Legend />
         </PieChart>
       </ResponsiveContainer>
     );
   }
 
-  if (chartType === "line") {
-    return (
-      <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={mergedData}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="year" />
-          <YAxis />
-          <Tooltip />
-          <Legend />
-          {series.map((s, i) => (
-            <Line
-              key={s.name}
-              dataKey={s.name}
-              stroke={colors[i % colors.length]}
-            />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
-    );
-  }
+  const ChartComponent = chartType === "line" ? LineChart : BarChart;
+  const ChartElement = chartType === "line" ? Line : Bar;
 
   return (
     <ResponsiveContainer width="100%" height={400}>
-      <BarChart data={mergedData}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="year" />
-        <YAxis />
-        <Tooltip />
+      <ChartComponent data={processedData}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+        <XAxis dataKey="year" tick={{ fill: "#64748b" }} />
+        <YAxis
+          tickFormatter={(value) => `$${value / 1000}k`}
+          tick={{ fill: "#64748b" }}
+        />
+        <Tooltip
+          formatter={(value: number, name: string) => [
+            `$${value.toLocaleString()}`,
+            name,
+          ]}
+        />
         <Legend />
-        {series.map((s, i) => (
-          <Bar key={s.name} dataKey={s.name} fill={colors[i % colors.length]} />
+        {series.map((s, index) => (
+          <ChartElement
+            key={s.name}
+            dataKey={s.name}
+            fill={COLORS[index % COLORS.length]}
+            stroke={COLORS[index % COLORS.length]} // Stroke for Line chart
+          />
         ))}
-      </BarChart>
+      </ChartComponent>
     </ResponsiveContainer>
   );
 }
